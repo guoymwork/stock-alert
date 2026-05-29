@@ -1,0 +1,48 @@
+# === Python ===
+__pycache__/
+*.py[cod]
+*.egg-info/
+*.egg
+dist/
+build/
+*.so
+.eggs/
+venv/
+.venv/
+env/
+.env
+
+# === Node ===
+node_modules/
+package-lock.json
+
+# === Frontend build ===
+frontend/dist/
+backend/static/
+
+# === Database ===
+backend/data/*.db
+backend/data/*.db-journal
+
+# === IDE ===
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+
+# === Logs ===
+*.log
+
+# === OS ===
+.DS_Store
+._*
+.Spotlight-V100
+.Trashes
+
+# === Misc ===
+*.bak
+*.tmp
+*.cache
