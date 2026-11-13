@@ -9,19 +9,19 @@ ARG PYTHON_IMAGE=python:3.11-slim
 # ============================================================
 FROM ${NODE_IMAGE} AS frontend-build
 
-WORKDIR /build
+# 保持 frontend/ 这一层目录，vite 的 outDir（../backend/static）才能解析到 /build/backend/static
+WORKDIR /build/frontend
 
 ARG NPM_REGISTRY=""
 
-# 保持与仓库相同的目录结构，vite 的 outDir（../backend/static）才能正确解析
-COPY frontend/package.json frontend/package-lock.json ./frontend/
+COPY frontend/package.json frontend/package-lock.json ./
 RUN if [ -n "$NPM_REGISTRY" ]; then \
-        cd frontend && npm config set registry "$NPM_REGISTRY" && npm config set replace-registry-host always; \
+        npm config set registry "$NPM_REGISTRY" && npm config set replace-registry-host always; \
     fi \
-    && cd frontend && npm ci --no-audit --no-fund
+    && npm ci --no-audit --no-fund
 
-COPY frontend/ ./frontend/
-RUN cd frontend && npm run build
+COPY frontend/ ./
+RUN npm run build
 
 
 # ============================================================
