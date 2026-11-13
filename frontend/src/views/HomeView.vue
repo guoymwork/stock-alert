@@ -46,9 +46,9 @@ function scheduleRefresh() {
 }
 
 async function onAdded(codes) { await store.addStocks(codes); await store.fetchAllIntraday() }
-const confirmDel = ref({ show: false, symbol: '' })
-function onRemove(symbol) { confirmDel.value = { show: true, symbol } }
-async function doRemove() { await store.removeStock(confirmDel.value.symbol); confirmDel.value = { show: false, symbol: '' } }
+const confirmDel = ref({ show: false, symbol: '', market: '' })
+function onRemove(symbol, market) { confirmDel.value = { show: true, symbol, market: market || '' } }
+async function doRemove() { await store.removeStock(confirmDel.value.symbol, confirmDel.value.market); confirmDel.value = { show: false, symbol: '', market: '' } }
 
 const highlightSymbol = ref(null)
 

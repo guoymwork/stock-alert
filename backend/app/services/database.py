@@ -127,9 +127,16 @@ class Database:
             except sqlite3.IntegrityError:
                 return None  # duplicate
 
-    def remove_from_watchlist(self, symbol: str) -> bool:
+    def remove_from_watchlist(self, symbol: str, market: Optional[str] = None) -> bool:
+        # watchlist 的唯一键是 (symbol, market)：同一代码可能同时存在
+        # 上证指数(000001@SH) 与平安银行(000001@SZ)，只按 symbol 删会连坐。
         with self._conn() as conn:
-            cur = conn.execute("DELETE FROM watchlist WHERE symbol = ?", (symbol,))
+            if market:
+                cur = conn.execute(
+                    "DELETE FROM watchlist WHERE symbol = ? AND market = ?", (symbol, market)
+                )
+            else:
+                cur = conn.execute("DELETE FROM watchlist WHERE symbol = ?", (symbol,))
             return cur.rowcount > 0
 
     def watchlist_has(self, symbol: str) -> bool:

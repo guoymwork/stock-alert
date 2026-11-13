@@ -71,8 +71,8 @@ export function addToWatchlist(codes) {
   return client.post('/watchlist/batch', { codes })
 }
 
-export function removeFromWatchlist(symbol) {
-  return client.delete(`/watchlist/${symbol}`)
+export function removeFromWatchlist(symbol, market) {
+  return client.delete(`/watchlist/${symbol}`, { params: { market } })
 }
 
 // ---- Annotations ----

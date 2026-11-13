@@ -70,12 +70,21 @@ export const useStockStore = defineStore('stock', () => {
     return data
   }
 
-  async function removeStock(symbol) {
-    await api.removeFromWatchlist(symbol)
-    watchlist.value = watchlist.value.filter((item) => item.symbol !== symbol)
-    delete quotes.value[symbol]
-    delete intradayData.value[symbol]
-    delete intradayMacd.value[symbol]
+  async function removeStock(symbol, market) {
+    await api.removeFromWatchlist(symbol, market)
+    // 同一 symbol 可能对应不同市场（000001@SH 上证指数 / 000001@SZ 平安银行），
+    // 指定 market 时只移除这一条
+    watchlist.value = watchlist.value.filter((item) =>
+      market
+        ? !(item.symbol === symbol && item.market === market)
+        : item.symbol !== symbol
+    )
+    // 只有当该 symbol 已完全不在列表中时才清理缓存，避免误删同代码另一市场的数据
+    if (!watchlist.value.some((item) => item.symbol === symbol)) {
+      delete quotes.value[symbol]
+      delete intradayData.value[symbol]
+      delete intradayMacd.value[symbol]
+    }
   }
 
   async function fetchAllQuotes() {

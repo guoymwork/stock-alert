@@ -86,7 +86,7 @@ function goToDetail() {
 
 function onRemove(e) {
   e.stopPropagation()
-  emit('remove', props.symbol)
+  emit('remove', props.symbol, props.market)
 }
 </script>
 

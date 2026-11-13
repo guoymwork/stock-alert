@@ -124,7 +124,9 @@ async def batch_add(body: BatchCodesRequest):
 
 
 @router.delete("/{symbol}", response_model=ApiResponse)
-async def remove_from_watchlist(symbol: str):
-    if not _get_db().remove_from_watchlist(symbol):
+async def remove_from_watchlist(symbol: str, market: Optional[str] = None):
+    # 传 market 则只删该市场下的这一只，避免上证指数(000001@SH) 与
+    # 平安银行(000001@SZ) 互相连坐删除
+    if not _get_db().remove_from_watchlist(symbol, market):
         raise HTTPException(status_code=404, detail=f"股票 {symbol} 不在自选列表中")
     return ApiResponse(message=f"已删除 {symbol}")
