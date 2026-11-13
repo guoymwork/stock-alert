@@ -14,15 +14,14 @@ env/
 
 # === Node ===
 node_modules/
-package-lock.json
 
 # === Frontend build ===
 frontend/dist/
 backend/static/
 
 # === Database ===
-backend/data/*.db
-backend/data/*.db-journal
+# 运行时数据（自选股/行情缓存/标注）由 SQLite 存储，容器部署时用命名卷
+backend/data/
 
 # === IDE ===
 .vscode/

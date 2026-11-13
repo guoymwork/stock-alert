@@ -1,0 +1,29 @@
+# 依赖与构建产物
+node_modules/
+frontend/dist/
+backend/static/
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.env
+
+# 数据库与缓存（运行时由命名卷提供）
+backend/data/*.db
+backend/data/*.db-*
+backend/data/*.json
+
+# 版本控制与编辑器
+.git/
+.gitignore
+.vscode/
+.idea/
+.DS_Store
+._*
+Thumbs.db
+
+# 日志与临时文件
+*.log
+*.tmp
+*.bak
+*.cache

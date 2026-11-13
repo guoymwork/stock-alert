@@ -1,0 +1,43 @@
+name: stock-alert
+
+services:
+  app:
+    build:
+      # 默认用当前目录；设为 Git URL 可让每次构建直接从仓库拉最新代码
+      # 例：STOCK_BUILD_CONTEXT=https://github.com/guoymwork/stock-alert.git#main
+      context: ${STOCK_BUILD_CONTEXT:-.}
+      dockerfile: Dockerfile
+      # 默认使用官方源；网络受限时通过 .env 切换到可用镜像源/软件源
+      args:
+        NODE_IMAGE: ${NODE_IMAGE:-node:20-bookworm-slim}
+        PYTHON_IMAGE: ${PYTHON_IMAGE:-python:3.11-slim}
+        NPM_REGISTRY: ${NPM_REGISTRY:-}
+        PIP_INDEX_URL: ${PIP_INDEX_URL:-}
+    image: stock-alert:latest
+    container_name: stock-alert
+    restart: unless-stopped
+
+    ports:
+      # 宿主机端口可通过 .env 中的 STOCK_ALERT_PORT 修改，容器内固定 8000
+      - "${STOCK_ALERT_PORT:-8001}:8000"
+
+    environment:
+      # 影响分时数据时间戳与交易时段判断，勿改为 UTC
+      TZ: ${TZ:-Asia/Shanghai}
+      # SQLite（自选股 + 行情缓存 + 标注）落在下面的命名卷中，容器重建不丢数据
+      STOCK_ALERT_DB_PATH: /app/data/stock.db
+      # 需要走宿主代理访问行情接口时，在 .env 中配置 STOCK_HTTP_PROXY /
+      # STOCK_HTTPS_PROXY；留空表示直连（推荐），且不会继承终端的代理变量
+      HTTP_PROXY: ${STOCK_HTTP_PROXY:-}
+      HTTPS_PROXY: ${STOCK_HTTPS_PROXY:-}
+      NO_PROXY: ${STOCK_NO_PROXY:-localhost,127.0.0.1}
+
+    volumes:
+      - stock-alert-data:/app/data
+
+    # 便于容器内代理指向宿主机（如 Clash: http://host.docker.internal:7897）
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+volumes:
+  stock-alert-data:

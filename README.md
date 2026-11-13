@@ -70,15 +70,73 @@ npm run dev            # → http://localhost:3001（自动代理 /api → :8000
 ./build.sh             # 输出到 backend/static/
 ```
 
+## Docker Compose 部署
+
+单容器设计：Node 阶段仅用于编译前端，最终镜像只有 Python 运行时；FastAPI 同时托管 `/api/*` 接口与前端静态页，前端使用相对路径（`baseURL: '/api'`），因此无需额外 Nginx 或跨域配置。
+
+```bash
+cp .env.example .env
+docker compose up -d --build
+# 访问 http://localhost:8001
+```
+
+- **端口**：`.env` 的 `STOCK_ALERT_PORT` 只改宿主机映射端口（默认 8001），容器内固定 8000。
+- **数据持久化**：SQLite 位于容器内 `/app/data/stock.db`（自选股 + 行情缓存 + 标注），由命名卷 `stock-alert_stock-alert-data` 保存。`docker compose down`、重建镜像、升级版本都不会丢数据；只有 `docker compose down -v` 会清空。
+- **时区**：镜像内安装 `tzdata` 并设置 `TZ=Asia/Shanghai`。后端用 `date.today()` 生成分时数据时间戳，容器跑在 UTC 会导致分时图错位。
+- **代理**：容器默认直连行情接口，不会继承终端的 `HTTP_PROXY`。若必须走宿主机代理（如 Clash），在 `.env` 中设置：
+  ```dotenv
+  STOCK_HTTP_PROXY=http://host.docker.internal:7897
+  STOCK_HTTPS_PROXY=http://host.docker.internal:7897
+  ```
+  然后 `docker compose up -d` 重启容器使环境变量生效。
+- **构建源**：默认从 Docker Hub / npm / PyPI 官方源拉取。若 NAS 或国内网络拉不动，在 `.env` 中设置 `NODE_IMAGE`、`PYTHON_IMAGE`、`NPM_REGISTRY`、`PIP_INDEX_URL`（`.env.example` 内有一组已验证可用的国内源），再 `docker compose up -d --build`。
+- **数据备份**：`docker compose exec app sh -c 'cp /app/data/stock.db /app/data/backup.db'`，或从宿主机 `docker cp stock-alert:/app/data/stock.db ./`。
+- **健康检查**：镜像内置 `/health` 探活（30s 间隔），`docker compose ps` 中显示 `healthy` 即服务可用。
+
+### 从 Git 拉取并一键更新
+
+部署机上把仓库 clone 下来，用 `deploy.sh` 完成「拉代码 → 重建 → 重启」：
+
+```bash
+git clone https://github.com/guoymwork/stock-alert.git
+cd stock-alert
+cp .env.example .env
+./deploy.sh
+```
+
+> `STOCK_BUILD_CONTEXT` 可以直接填 Git URL 让 compose 每次构建自动 clone，但该 clone 由 Docker daemon 执行，若 daemon 访问不了 GitHub 会失败。这种情况保持默认的本地副本 + `deploy.sh` 即可。
+
+排错：
+
+| 现象 | 处理 |
+|------|------|
+| 页面能开但行情/K线全空 | `docker compose logs -f app` 找异常；`global flags not at the start` 说明命中了旧版正则写法（见下方兼容性说明） |
+| 交易时段不刷新 | 确认 `TZ=Asia/Shanghai`，`docker compose exec app date` 应为东八区 |
+| 端口被占用 | 修改 `.env` 的 `STOCK_ALERT_PORT` 后 `docker compose up -d` |
+| 卡在 `load metadata` / 基础镜像 401 | 镜像加速源不可用，按上文配置 `NODE_IMAGE`、`PYTHON_IMAGE` 后重新构建 |
+| 构建时 npm 失败 | 确认 `frontend/package-lock.json` 已提交，镜像内使用 `npm ci` |
+| 构建时 pip 超时 | 在 `.env` 配置 `PIP_INDEX_URL`（如阿里云 PyPI 镜像）后重新构建 |
+| 构建卡在 `resolve image config for docker.io/docker/dockerfile:1` | 不要在 Dockerfile 首行加 `# syntax=docker/dockerfile:1`，它会让 BuildKit 额外拉取前端镜像；本项目只用标准语法 |
+
+### Python 3.11+ 兼容性
+
+`backend/app/services/data_fetcher.py` 中的代码前缀剥离曾写作 `re.sub(r"^(?i)(hk|sh|sz)", ...)`。Python 3.11 要求内联全局标志必须位于表达式最前面，否则编译期直接抛 `re.error: global flags not at the start`，会导致**实时行情、分时、K 线全部失败**。现改为 `flags=re.IGNORECASE` 参数形式。
+
 ## 项目结构
 
 ```
 ├── start.sh                   # 一键启动脚本
 ├── build.sh                   # 前端构建脚本
+├── Dockerfile                 # 多阶段构建（Node 编译前端 → Python 运行后端）
+├── docker-compose.yml         # 服务 + 命名卷 + 端口/环境变量
+├── docker-entrypoint.sh       # 确保 SQLite 数据目录存在
+├── deploy.sh                  # 部署机：git pull + compose 重建
+├── .env.example               # 可配置项示例
+├── .dockerignore
 ├── backend/
 │   ├── run.py                 # Uvicorn 启动入口
 │   ├── requirements.txt       # Python 依赖
-│   ├── data/                  # SQLite 数据库目录
+│   ├── data/                  # SQLite 数据库目录（运行时生成，不入库）
 │   ├── static/                # 前端构建产物（npm run build 输出）
 │   └── app/
 │       ├── main.py            # FastAPI 应用 + 静态文件托管

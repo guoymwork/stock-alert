@@ -7,7 +7,8 @@ BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DATA_DIR = os.path.join(BASE_DIR, "data")
 
 # SQLite database
-DB_PATH = os.path.join(DATA_DIR, "stock.db")
+# 容器部署时可用 STOCK_ALERT_DB_PATH 指向挂载卷（如 /app/data/stock.db）
+DB_PATH = os.environ.get("STOCK_ALERT_DB_PATH") or os.path.join(DATA_DIR, "stock.db")
 
 # Cache TTL (seconds) — still used as default TTL parameter
 CACHE_TTL = 300          # kline (historical)

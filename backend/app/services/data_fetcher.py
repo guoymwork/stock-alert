@@ -57,7 +57,9 @@ class DataFetcher:
     def _normalize_symbol(symbol: str, market: str = "") -> str:
         s = symbol.strip()
         # Strip any market prefix: hk, sh, sz (case-insensitive)
-        s = re.sub(r"^(?i)(hk|sh|sz)", "", s)
+        # 注意：内联标志 (?i) 必须位于表达式最前面，Python 3.11+ 会直接抛
+        # re.error: global flags not at the start，因此改用 flags 参数。
+        s = re.sub(r"^(hk|sh|sz)", "", s, flags=re.IGNORECASE)
         return s
 
     def _is_hk(self, market: str) -> bool:
